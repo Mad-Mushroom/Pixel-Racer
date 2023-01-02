@@ -22,6 +22,9 @@ Texture2D BluePlayerCar;
 int gameState = 0;
 int score = 0;
 int coins = 0;
+int selectedVehicle = 1;
+int boughtVehicles = 0;
+bool aexit = false;
 // Player
 int playerX = 400;
 float playerSpeed = 0;
@@ -42,7 +45,34 @@ int YellowCarPosX = 800/2+10;
 int coinPosX = 800/2-10;
 int coinPosY = -100;
 
+string svstr = "";
+
 int select = 1;
+
+int stringTointeger(string str){
+	int temp = 0;
+	for (int i = 0; i < str.length(); i++) {
+		temp = temp * 10 + (str[i] - '0');
+	}
+	return temp;
+}
+
+void loadGame(){
+	ifstream in("savegame.sav");
+	string line; int cycle = 1;
+	while(getline(in,line)){
+		if(cycle == 1) coins = stringTointeger(line);
+		if(cycle == 2) boughtVehicles = stringTointeger(line);
+		cycle++;
+	}
+	in.close();
+}
+
+void saveGame(){
+	ofstream out("savegame.sav");
+	out << coins << endl << boughtVehicles;
+	out.close();
+}
 
 void CleanScreen(){
 	BeginDrawing();
@@ -51,6 +81,7 @@ void CleanScreen(){
 }
 
 void Exit(){
+	aexit = true;
 	CloseWindow();
 	cout << "-----------" << endl;
 	cout << "Goodbye! :)" << endl << endl;
@@ -66,14 +97,37 @@ void SelectVehicle(){
 
 		if(select == 1) DrawTexture(RedPlayerCar, 800/2-35, 200, WHITE);
 		if(select == 2) DrawTexture(BluePlayerCar, 800/2-35, 200, WHITE);
+
+		DrawText(svstr.c_str(), 800/2-40, 300, 20, WHITE);
+		DrawText("Press Backspace to get back", 1, 1, 20, WHITE);
 	EndDrawing();
 
 	if(IsKeyPressed(KEY_RIGHT) && select < 2) select++;
 	if(IsKeyPressed(KEY_LEFT) && select > 1) select--;
+	if(IsKeyPressed(KEY_BACKSPACE)) gameState = 1;
+	if(IsKeyPressed(KEY_ENTER)){
+		if(select == 1) selectedVehicle = 1;
+		if(select == 2 && boughtVehicles == 1) selectedVehicle = 2;
+		if(select == 2 && boughtVehicles == 0){
+			if(coins - 1000 >= 0){ selectedVehicle=2; boughtVehicles=1; coins -= 1000; PlayerCar = LoadTexture("resource/img/player/Car2.png"); }
+			else{ svstr = "Not enough Coins!"; }
+		}
+	}
+
+	if(select == 1 && selectedVehicle == 1){ svstr = "Selected"; PlayerCar = LoadTexture("resource/img/player/Car1.png"); }
+	if(select == 1 && selectedVehicle != 1) svstr = "Unselected";
+	if(select == 2 && boughtVehicles == 0) svstr = "Buy for 1.000 Coins";
+	if(select == 2 && boughtVehicles == 1 && selectedVehicle == 1) svstr = "Unselected";
+	if(select == 2 && boughtVehicles == 1 && selectedVehicle == 2){ svstr = "Selected"; PlayerCar = LoadTexture("resource/img/player/Car2.png"); }
 }
 
 void SelectMap(){
-
+	BeginDrawing();
+		ClearBackground(BLACK);
+		DrawText("Under Development.", 1, 1, 40, WHITE);
+		DrawText("Press Backspace to get back.", 1, 50, 20, WHITE);
+	EndDrawing();
+	if(IsKeyPressed(KEY_BACKSPACE)) gameState = 1;
 }
 
 void ResetGame(){
@@ -102,8 +156,8 @@ void GameOver(){
 		DrawText("Press Enter to play again.", 1, 200, 20, WHITE);
 		DrawText("Press Backspace to go to the MainMenu", 1, 220, 20, WHITE);
 	EndDrawing();
-	if(IsKeyPressed(KEY_ENTER)) ResetGame();
-	if(IsKeyPressed(KEY_BACKSPACE)) gameState = 1;
+	if(IsKeyPressed(KEY_ENTER)){ ResetGame(); saveGame(); }
+	if(IsKeyPressed(KEY_BACKSPACE)){ gameState = 1; saveGame(); }
 }
 
 void MainGame(){
@@ -134,6 +188,8 @@ void MainGame(){
 		coinPosY = -100;
 		coinPosX = GetRandomValue(310, 420);
 	}
+	if(selectedVehicle == 1) playerMaxSpeed = 4;
+	if(selectedVehicle == 2) playerMaxSpeed = 8;
 
 
 	/* Draw Stuff */
@@ -163,6 +219,8 @@ void MainGame(){
 	if(IsKeyDown(KEY_LEFT) && playerX > 305) playerX -= 2;
 	if(IsKeyDown(KEY_UP) && playerSpeed <= playerMaxSpeed) playerSpeed += 1;
 	if(IsKeyReleased(KEY_UP) && playerSpeed >= playerMaxSpeed) playerSpeed=0;
+	if(IsKeyPressed(KEY_DOWN)) coins += 100;
+	if(IsKeyPressed(KEY_BACKSPACE)) gameState = 1;
 
 	/* Check Collision */
 	if(RedCarPosY >= 455 && RedCarPosY <= 530 && playerX > RedCarPosX-35 && playerX < RedCarPosX+35) gameState = 3;
@@ -184,7 +242,7 @@ void MainMenu(){
 	BeginDrawing();
 		ClearBackground(BLACK);
 		DrawTexture(ArrowRightTexture, 360, ArrowPos, WHITE);
-		DrawText("Pixel Racer", 200, 1, 50, WHITE);
+		DrawText("Pixel Racer Jam Edition", 100, 1, 50, WHITE);
 		DrawText("Play", 400, 200, 20, WHITE);
 		DrawText("Select Vehicle", 400, 220, 20, WHITE);
 		DrawText("Select Map", 400, 240, 20, WHITE);
@@ -215,6 +273,8 @@ void init(){
 	BluePlayerCar = LoadTexture("resource/img/player/Car2.png");
 	BlackBackground = LoadTexture("resource/img/background/black.png");
 
+	loadGame();
+
 	gameState++;
 }
 
@@ -226,7 +286,7 @@ int main(void){
             	ClearBackground(BLACK);
 	EndDrawing();
 
-    	while (!WindowShouldClose()){
+    	while (!aexit){
 		if(gameState == 0) init();
 		if(gameState == 1) MainMenu();
 		if(gameState == 2) MainGame();
