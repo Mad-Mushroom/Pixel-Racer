@@ -1,7 +1,7 @@
 COMPILER = g++
 NAME = PixelRacer
-OUTPUT = PixelRacer
-FILES = *.cpp
+OUTPUT = ./bin/PixelRacer
+FILES = ./src/*.cpp
 COMPILER-FLAGS = -Wall -std=c++11
 LINKER-FLAGS = -lraylib
 
